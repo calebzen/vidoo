@@ -1,0 +1,16 @@
+{
+  "builds": [
+    {
+      "src": "packages/web",  
+      "use": "@railway/nixpacks",
+      "buildCommand": "pnpm --filter web run build",  
+      "startCommand": "pnpm --filter web run start"   
+    },
+    {
+      "src": "packages/server",   
+      "use": "@railway/nixpacks",
+      "buildCommand": "pnpm --filter server run build",   
+      "startCommand": "pnpm --filter server run start"    
+    }
+  ]
+}
