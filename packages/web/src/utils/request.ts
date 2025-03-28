@@ -1,30 +1,40 @@
 import axios from "axios";
 
 interface RequestOption {
-	url?: string;
-	method: "GET" | "POST" | "PUT" | "DELETE";
-	params?: { [key: string]: any };
-	data?: { [key: string]: any };
+  url?: string;
+  method: "GET" | "POST" | "PUT" | "DELETE";
+  params?: { [key: string]: any };
+  data?: { [key: string]: any };
 }
 
-export const request = async (options: RequestOption) => {
-	const instance = axios.create({
-		baseURL: "https://api.themoviedb.org/3",
-		headers: {
-			accept: "application/json",
-		},
-		params: {
-			language: "zh-CN",
-			api_key: import.meta.env.VITE_TMDB_API_KEY,
-		},
-	});
+const cache: Record<string, { data: any; timestamp: number }> = {};
+const CACHE_DURATION = 10 * 60 * 1000;
 
-	try {
-		return (await instance.request({ ...options })).data;
-	} catch (err) {
-		return {
-			status: "INTERVAL_ERROR",
-			err,
-		};
-	}
+export const request = async <T = any>(options: RequestOption) => {
+  const instance = axios.create({
+    baseURL: "http://localhost:3000",
+    headers: {
+      accept: "application/json",
+    },
+    params: {
+      language: "en-US",
+    },
+  });
+
+  const cacheKey = JSON.stringify(options);
+  const now = Date.now();
+  const cachedData = cache[cacheKey];
+  if (cachedData && now - cachedData.timestamp < CACHE_DURATION) {
+    console.log("Using cached data!");
+    return cache[cacheKey] as T;
+  }
+
+  try {
+    return (await instance.request({ ...options })).data as T;
+  } catch (err: any) {
+    return {
+      status: "INTERVAL_ERROR",
+      err,
+    } as T;
+  }
 };

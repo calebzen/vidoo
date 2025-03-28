@@ -1,11 +1,112 @@
-@config "../tailwind.config.js";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "flyonui" {
+  themes: black --default;
+}
+@import "flyonui/variants.css";
+@source "../node_modules/flyonui/dist/index.js";
+
+@theme {
+  --spacing-sm: 0.25rem;
+  --spacing-md: 0.5rem;
+  --spacing-lg: 1rem;
+  --spacing-xl: 2rem;
+}
+
+@utility container {
+  margin-inline: auto;
+  @media (width >= --theme(--breakpoint-sm)) {
+    max-width: none;
+  }
+  @media (width >= 40rem) {
+    max-width: 40rem;
+  }
+  @media (width >= 48rem) {
+    max-width: 48rem;
+  }
+  @media (width >= 62.25rem) {
+    max-width: 62.25rem;
+  }
+  @media (width >= 64rem) {
+    max-width: 64rem;
+  }
+  @media (width >= 80rem) {
+    max-width: 80rem;
+  }
+}
+
+/*
+  The default border color has changed to `currentColor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+}
 
 html,
 body,
 #app {
-	@apply w-full h-auto m-0 p-0 text-content;
-	scrollbar-gutter: stable;
+  @apply size-full min-h-full m-0 p-0 text-content overflow-hidden;
+}
+
+[data-overlayscrollbars-contents] {
+  @apply flex flex-col;
+}
+
+@utility text-heading {
+  @apply text-xl font-bold;
+  color: var(--color-base-content);
+}
+
+@utility text-subheading {
+  @apply text-lg font-bold;
+  color: var(--color-base-content);
+}
+
+@utility text-content {
+  @apply text-base font-bold;
+  color: var(--color-base-content);
+}
+
+@utility text-description {
+  @apply text-sm font-bold;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+}
+
+@utility text-meta {
+  @apply text-xs font-bold;
+  color: color-mix(in oklab, var(--color-base-content) 50%, transparent);
+}
+
+@utility sub-container {
+  @apply max-w-7xl mx-auto;
+}
+
+@utility before-dot {
+  @apply before:content-[''] before:absolute before:size-1.5 before:bg-gray-200 before:rounded-full before:top-1/2 before:-translate-y-1/2;
+}
+
+@utility absolute-center {
+  @apply top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2;
+}
+
+@utility aspect-* {
+  aspect-ratio: --value(--aspect-ratio-*, ratio, [ratio]);
+}
+
+[class^="swiper-button"] {
+  @apply size-10! rounded-full after:text-base! after:font-bold!;
+}
+
+.swiper-button-disabled {
+  @apply hidden!;
 }

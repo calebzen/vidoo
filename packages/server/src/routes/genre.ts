@@ -1,27 +1,26 @@
-import axios from "axios";
 import { Router } from "express";
+import { createRequest } from "src/utils";
 
-const router: Router = Router();
+const router = Router();
+
+const request = createRequest({ prefix: "/genre" });
 
 router.get("/movie/list", async (req, res) => {
-	console.log(process.env.API_KEY);
-	const options = {
-		method: "GET",
-		url: `https://api.themoviedb.org/3/movie/popular?api_key=${process.env.API_KEY}`,
-		headers: {
-			accept: "application/json",
-		},
-	};
+  const { language } = req.query;
+  res.json(
+    await request({
+      method: "GET",
+      url: `/movie/list`,
+      params: { language },
+    })
+  );
+});
 
-	try {
-		const response = await axios.request({
-			...options,
-		});
-		res.json(response.data);
-	} catch (err) {
-		console.error(err);
-		res.status(500).json(err);
-	}
+router.get("/tv/list", async (req, res) => {
+  const { language } = req.query;
+  res.json(
+    await request({ method: "GET", url: `/tv/list`, params: { language } })
+  );
 });
 
 export default router;

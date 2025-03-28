@@ -1,38 +1,125 @@
 <script setup lang="ts">
   import discover from "api/discover";
   import movie from "api/movie";
-  import { onMounted, ref } from "vue";
-  import { sliceImgUrl } from '../../utils/sliceImgUrl';
+  import splice from "api/splice";
+  import genre from "api/genre";
+  import { onMounted, onUnmounted, ref, shallowRef, useTemplateRef, watch } from "vue";
+  import { MovieList } from "types";
+  import { formatVoteAverage } from "src/utils";
+  import { useIntersectionObserver } from '@vueuse/core';
+  import { ArrowDownWideNarrow, ArrowUpWideNarrow, ArrowDownAZ, ArrowUpAZ } from 'lucide-vue-next';
 
-  const list = ref([]);
+  const list = ref<any[]>([]);
+  const genreList = ref<MovieList>();
+  const selection = ref<Set<number>>(new Set([]));
+  const selectChange = shallowRef(false);
+  const page = ref(1);
+  const loaderRef = useTemplateRef<HTMLDivElement>('loader');
+  const loaderVisible = shallowRef(true);
+  const isLoading = shallowRef(false);
 
-  const handleClick = async (movie_id: string) => {
-    await movie.videos(movie_id).then(r => console.log(r));
+  const sortList = [
+    { icon: ArrowDownWideNarrow, label: "热门降序" },
+    { icon: ArrowUpWideNarrow, label: "热门升序" },
+    { icon: ArrowDownAZ, label: "A-Z降序" },
+    { icon: ArrowUpAZ, label: "A-Z升序" },
+  ];
+
+  const fetchDiscoverMovie = async () => {
+    isLoading.value = true;
+    const response = await discover.movie(true, page.value, [...selection.value].map(id => id).join(","));
+    list.value = response.results;
+    isLoading.value = false;
   };
 
+  const loadMore = async () => {
+    isLoading.value = true;
+    const response = await discover.movie(true, page.value, [...selection.value].map(id => id).join(","));
+    list.value.push(...response.results);
+    isLoading.value = false;
+  };
+
+  const { stop } = useIntersectionObserver(loaderRef, ([entry]) => {
+    loaderVisible.value = entry.isIntersecting || false;
+  });
+
+  watch(loaderVisible, () => {
+    if (loaderVisible.value && !isLoading.value) {
+      page.value += 1;
+      loadMore();
+    }
+  });
+
+  watch(() => Array.from(selection.value), (newValue, oldValue) => {
+    if (newValue !== oldValue) {
+      selectChange.value = true;
+      page.value = 1;
+      fetchDiscoverMovie().finally(() => selectChange.value = false);
+    }
+  });
 
   onMounted(async () => {
-    list.value = await discover.movie(false);
+    genreList.value = await genre.movieList();
+    await fetchDiscoverMovie();
   });
+
+  onUnmounted(() => {
+    stop();
+  })
 
 </script>
 
 <template>
-  <div class="movie-page bg-base-100 mt-2">
-    <div class="container md:px-10 lg:px-20 flex flex-row gap-2">
-      <div class="left w-64 min-w-64 h-96 bg-base-200 sticky top-16">movie</div>
-      <div class="right grow bg-inherit grid grid-cols-4 gap-4">
-        <div v-for="item in list.results" :key="item.id" class="relative rounded cursor-pointer group overflow-hidden"
-          @click="() => handleClick(item.id)">
-          <img :src="sliceImgUrl(item.poster_path)" alt=""
-            class="rounded object-cover size-full group-hover:scale-105 transition-transform duration-200">
-          <div
-            class="absolute left-0 right-0 bottom-0 w-full h-16 bg-base-200 bg-opacity-50 backdrop-blur-md p-2 flex flex-col justify-between rounded-bl rounded-br">
-            <span class="text-content line-clamp-1">{{ item.title }}</span>
-            <span class="text-meta line-clamp-1">{{ item.release_date }}</span>
+  <div class="movie-page sub-container bg-base-100 pt-4 mt-16">
+    <div class="tool-bar w-full h-full bg-inherit">
+      <div class="filter-category flex items-start gap-4">
+        <div class="uppercase flex text-heading text-nowrap">
+          GENRES
+        </div>
+        <div v-if="genreList && !!genreList.genres.length" class="flex flex-wrap gap-1 grow">
+          <input type="checkbox" name="category-checkbox" v-for="cate in genreList.genres"
+            class="btn btn-sm btn-text rounded text-description" :aria-label="cate.name"
+            :checked="selection.has(cate.id)"
+            @click="() => selection.has(cate.id) ? selection.delete(cate.id) : selection.add(cate.id)" />
+          <input type="reset" value="reset" class="btn btn-sm btn-primary btn-soft text-description ml-auto"
+            @click="() => selection.clear()">
+        </div>
+      </div>
+    </div>
+    <div class="divider my-4"></div>
+    <div v-if="list && !!list.length" class="w-full flex flex-wrap gap-4 justify-center">
+      <div class="inline-flex flex-wrap gap-4 justify-center">
+        <div v-for="item in list" class="inline-block flex-shrink-0 w-52">
+          <RouterLink :to="`movie/${item.id}`" target="_blank">
+            <div class="flex flex-col h-full cursor-pointer relative">
+              <img :src="splice.imageUrl(item.poster_path)" class="w-full h-80 bg-inherit rounded">
+              <div class="mt-1 flex flex-col justify-between">
+                <h3 class="text-heading line-clamp-1">{{ item.name || item.title }}</h3>
+                <div class="text-description flex justify-between items-center">
+                  <span>{{ item.release_date || item.first_air_date }}</span>
+                  <span>{{ formatVoteAverage(item.vote_average) }}</span>
+                </div>
+              </div>
+            </div>
+          </RouterLink>
+          <div v-if="selectChange" class="fixed inset-0 bg-base-200/10 flex justify-center items-center">
+            <span class="loading size-10"></span>
           </div>
         </div>
       </div>
+    </div>
+    <div v-else class="skeleton-container w-full inline-flex flex-wrap gap-4 justify-center">
+      <div v-for="_ in Array.from({ length: 10 })" class="flex flex-col h-96 w-52 min-w-52 gap-4">
+        <div class="skeleton skeleton-animated h-80 w-full"></div>
+        <div class="skeleton skeleton-animated h-3 w-full"></div>
+        <div class="flex items-center gap-4">
+          <div class="skeleton skeleton-animated h-2 w-3/5"></div>
+          <div class="skeleton skeleton-animated h-2 grow"></div>
+        </div>
+      </div>
+    </div>
+    <div ref="loader" class="loader w-full flex flex-col justify-center items-center gap-4 py-10 mt-4">
+      <span class="loading size-10"></span>
     </div>
   </div>
 </template>
