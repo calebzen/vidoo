@@ -3,10 +3,11 @@
 	"version": "0.0.1",
 	"description": "Vidoo server.",
 	"type": "module",
-	"main": "dist/index.cjs",
+	"main": "dist/index.mjs",
 	"scripts": {
 		"dev": "tsx watch index.ts",
-		"build": "tsup"
+		"build": "tsup",
+		"start": "node dist/index.mjs"
 	},
 	"keywords": [],
 	"author": "",
